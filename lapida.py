@@ -86,12 +86,12 @@ def otimizar_prompt(prompt_original: str):
         return f"Erro na chamada da API: {e}"
 
 # -----------------------------------------------------
-# 4. Execução e Exemplo
+# 4. Execução
 # -----------------------------------------------------
 
 if __name__ == "__main__":
     # Prompt do usuário para teste
-    prompt_teste = "escreva um resumo sobre o universo, mas tem que ser bom"
+    prompt_teste = input("Digite o prompt a ser melhorado:\n")
 
     resultado_json = otimizar_prompt(prompt_teste)
     

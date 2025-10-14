@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Otimizador de Prompts Gemini (Front-end)</title>
+    <!-- Carrega Tailwind CSS para estilização moderna e responsiva -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Configuração da fonte Inter -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-4 bg-gray-50">
+    
+    <div class="w-full max-w-4xl bg-white shadow-xl rounded-xl p-8 space-y-8">
+        <!-- Cabeçalho -->
+        <header class="text-center">
+            <h1 class="text-4xl font-extrabold text-blue-800">✨ Otimizador de Prompts IA</h1>
+            <p class="mt-2 text-gray-600">Transforme seus comandos vagos em prompts de alta qualidade usando o Gemini.</p>
+        </header>
+
+        <!-- Seção de Entrada (Input) -->
+        <section class="space-y-4">
+            <label for="promptInput" class="block text-lg font-semibold text-gray-700">1. Insira Seu Prompt Original:</label>
+            <textarea id="promptInput" rows="4" placeholder="Ex: 'me ajude a escrever um email de trabalho'"
+                      class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 resize-none"></textarea>
+            
+            <button id="optimizeButton" 
+                    class="w-full py-3 px-4 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition duration-300 focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:opacity-50"
+                    onclick="optimizePrompt()">
+                Otimizar Prompt
+            </button>
+            
+            <!-- Indicador de Carregamento/Erro -->
+            <div id="statusMessage" class="text-center p-2 rounded-lg hidden"></div>
+        </section>
+
+        <hr class="border-gray-200">
+
+        <!-- Seção de Saída (Output) -->
+        <section id="outputSection" class="space-y-6 hidden">
+            <h2 class="text-2xl font-bold text-blue-800 border-b pb-2">2. Resultado da Otimização</h2>
+
+            <!-- Resultado Otimizado -->
+            <div>
+                <h3 class="text-xl font-semibold text-gray-700 mb-2 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Prompt Otimizado (Pronto para Uso)
+                </h3>
+                <div id="optimizedPromptOutput" class="p-4 bg-green-50 border border-green-200 rounded-lg text-gray-800 whitespace-pre-wrap font-mono text-sm">
+                    <!-- Otimização será inserida aqui -->
+                </div>
+                <button onclick="copyToClipboard('optimizedPromptOutput')" class="mt-2 text-xs font-medium text-blue-600 hover:text-blue-800">
+                    Copiar para Área de Transferência
+                </button>
+            </div>
+
+            <!-- Dicas Aplicadas -->
+            <div>
+                <h3 class="text-xl font-semibold text-gray-700 mb-2 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Estratégias Aplicadas
+                </h3>
+                <div id="tipsOutput" class="space-y-3">
+                    <!-- Dicas serão inseridas aqui -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Aviso de API -->
+        <footer class="text-center text-xs text-gray-500 pt-4 border-t mt-8">
+            <p>Conectado ao endpoint FastAPI local: <code class="bg-gray-100 p-1 rounded">http://127.0.0.1:8000/otimizar/</code></p>
+        </footer>
+    </div>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:8000/otimizar/';
+        const promptInput = document.getElementById('promptInput');
+        const optimizeButton = document.getElementById('optimizeButton');
+        const statusMessage = document.getElementById('statusMessage');
+        const outputSection = document.getElementById('outputSection');
+        const optimizedPromptOutput = document.getElementById('optimizedPromptOutput');
+        const tipsOutput = document.getElementById('tipsOutput');
+
+        // Função para mostrar mensagens de status (sucesso/erro/carregamento)
+        function showStatus(message, type = 'info') {
+            statusMessage.textContent = message;
+            statusMessage.className = `text-center p-3 rounded-lg mt-4 block`;
+            
+            if (type === 'error') {
+                statusMessage.classList.add('bg-red-100', 'text-red-700');
+            } else if (type === 'success') {
+                statusMessage.classList.add('bg-green-100', 'text-green-700');
+            } else {
+                statusMessage.classList.add('bg-blue-100', 'text-blue-700');
+            }
+            statusMessage.classList.remove('hidden');
+        }
+
+        // Função principal para chamar a API
+        async function optimizePrompt() {
+            const originalPrompt = promptInput.value.trim();
+            if (!originalPrompt) {
+                showStatus('Por favor, insira um prompt para otimizar.', 'error');
+                return;
+            }
+
+            // Resetar estados
+            outputSection.classList.add('hidden');
+            tipsOutput.innerHTML = '';
+            optimizedPromptOutput.textContent = 'Aguardando resposta...';
+            optimizeButton.disabled = true;
+            showStatus('Otimizando... Aguarde, o Gemini está trabalhando!', 'info');
+
+            const payload = {
+                prompt_original: originalPrompt
+            };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    // Trata erros HTTP (ex: 503 Service Unavailable)
+                    const errorMessage = result.detail || `Erro HTTP: ${response.status} - Falha na API.`;
+                    showStatus(`ERRO: ${errorMessage}`, 'error');
+                    optimizedPromptOutput.textContent = 'Não foi possível gerar a otimização.';
+                    return;
+                }
+
+                // Processa o sucesso
+                displayResults(result);
+                showStatus('Otimização concluída com sucesso!', 'success');
+
+            } catch (error) {
+                // Trata erros de rede ou CORS
+                console.error("Erro de conexão:", error);
+                showStatus(`ERRO DE CONEXÃO: Não foi possível conectar ao servidor FastAPI. Verifique se o Uvicorn está rodando em ${API_URL}`, 'error');
+                optimizedPromptOutput.textContent = 'Falha na conexão com a API.';
+            } finally {
+                optimizeButton.disabled = false;
+            }
+        }
+
+        // Função para exibir os resultados na interface
+        function displayResults(data) {
+            optimizedPromptOutput.textContent = data.prompt_otimizado;
+            
+            data.dicas_aplicadas.forEach(dica => {
+                const tipCard = document.createElement('div');
+                tipCard.className = 'bg-white border border-yellow-300 rounded-lg p-4 shadow-md';
+                tipCard.innerHTML = `
+                    <h4 class="text-base font-bold text-yellow-700 mb-1">${dica.estrategia}</h4>
+                    <p class="text-sm text-gray-700">${dica.detalhes}</p>
+                `;
+                tipsOutput.appendChild(tipCard);
+            });
+
+            outputSection.classList.remove('hidden');
+        }
+
+        // Função para copiar texto (uso de execCommand é mais compatível em iFrames)
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const textToCopy = element.textContent;
+
+            const tempInput = document.createElement('textarea');
+            tempInput.value = textToCopy;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+
+            try {
+                document.execCommand('copy');
+                // Alerta visual simples (não usa alert() nativo)
+                showStatus('Texto copiado para a área de transferência!', 'success');
+                setTimeout(() => statusMessage.classList.add('hidden'), 2000);
+            } catch (err) {
+                console.error('Erro ao copiar', err);
+                showStatus('Erro ao tentar copiar o texto.', 'error');
+            } finally {
+                document.body.removeChild(tempInput);
+            }
+        }
+
+    </script>
+</body>
+</html>
+```
